@@ -89,28 +89,54 @@ function default_1(api) {
             const tokenUnit = network === "Mainnet"
                 ? "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d"
                 : "16a55b2a349361ff88c03788f93e1e966e5d689605d044fef722ddde0014df10745553444d";
+            // Auto-resolve sellingWalletVkey from payment source if not provided
+            let sellingWalletVkey = params.selling_wallet_vkey;
+            if (!sellingWalletVkey) {
+                try {
+                    const srcResp = await fetch(`${paymentServiceUrl}/payment-source/`, {
+                        headers: { token: apiKey }
+                    });
+                    const srcData = await srcResp.json();
+                    const sources = srcData?.data?.PaymentSources || [];
+                    const preprodSource = sources.find((s) => s.network === network);
+                    sellingWalletVkey = preprodSource?.SellingWallets?.[0]?.walletVkey;
+                    if (!sellingWalletVkey) {
+                        return { content: [{ type: "text", text: `❌ Could not find a selling wallet for network "${network}". Please check your Payment Service has a ${network} wallet configured.` }] };
+                    }
+                }
+                catch (err) {
+                    return { content: [{ type: "text", text: `❌ Failed to fetch payment source: ${err.message}` }] };
+                }
+            }
             const body = {
+                network,
                 name: params.name,
                 description: params.description,
-                api_url: params.api_url,
-                capability: {
+                apiBaseUrl: params.api_url,
+                sellingWalletVkey,
+                Tags: params.tags?.length ? params.tags : ["agent"],
+                ExampleOutputs: [{
+                        name: "Demo Output",
+                        url: `${params.api_url}/demo`,
+                        mimeType: "text/plain"
+                    }],
+                Capability: {
                     name: params.capability_name,
                     version: params.capability_version || "1.0.0"
                 },
-                pricing: [
-                    {
-                        unit: tokenUnit,
-                        amount: String(params.pricing_amount ?? 500000)
-                    }
-                ],
-                author: {
+                AgentPricing: {
+                    pricingType: "Fixed",
+                    Pricing: [{
+                            unit: tokenUnit,
+                            amount: String(params.pricing_amount ?? 1000000)
+                        }]
+                },
+                Author: {
                     name: params.author_name || "MasumiForge"
                 }
             };
             if (params.author_contact)
-                body.author.contact = params.author_contact;
-            if (params.tags?.length)
-                body.tags = params.tags;
+                body.Author.contactEmail = params.author_contact;
             try {
                 const resp = await fetch(`${paymentServiceUrl}/registry/`, {
                     method: "POST",
@@ -121,7 +147,7 @@ function default_1(api) {
                     body: JSON.stringify(body)
                 });
                 const data = await resp.json();
-                if (data.status !== "success" && !data.agentIdentifier) {
+                if (data.status !== "success") {
                     return {
                         content: [{
                                 type: "text",
@@ -129,11 +155,12 @@ function default_1(api) {
                             }]
                     };
                 }
-                const agentId = data.agentIdentifier || data.data?.agentIdentifier;
+                const agentId = data.data?.agentIdentifier;
+                const state = data.data?.state;
                 return {
                     content: [{
                             type: "text",
-                            text: `✅ Agent registered on Masumi (${network})!\n\n**AGENT_IDENTIFIER:** \`${agentId}\`\n\nNext steps:\n1. Add to your \`.env\`: \`AGENT_IDENTIFIER=${agentId}\`\n2. Restart your agent\n3. View on Sokosumi: https://${network === "Mainnet" ? "" : "preprod."}sokosumi.com/agents`
+                            text: `✅ Agent registered on Masumi (${network})!\n\nState: \`${state}\` — on-chain confirmation takes 5-15 min on Preprod.\n\nOnce confirmed, your **AGENT_IDENTIFIER** will appear in the Payment Service admin → AI Agents table.\n\nAdd it to your \`.env\` / Railway env vars:\n\`\`\`\nAGENT_IDENTIFIER=<value from admin UI>\n\`\`\`\n\nView on Sokosumi (after confirmation): https://${network === "Mainnet" ? "" : "preprod."}sokosumi.com/agents`
                         }]
                 };
             }
