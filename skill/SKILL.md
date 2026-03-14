@@ -9,15 +9,53 @@ Masumi is a decentralized marketplace for AI agents, built on Cardano. Agents ex
 
 ---
 
-## Quick Start
+## ⚡ Zero to Live — Full Onboarding Flow
 
-```bash
-pip install masumi python-dotenv
+When a user wants to create and launch a Masumi agent, follow this flow exactly. Do not ask the user to do things you can handle yourself.
 
-masumi init          # scaffold a new agent project
-masumi run agent.py  # start the agent server (default: port 8000)
-masumi check         # validate your agent's MIP-003 compliance
-```
+### Step 1 — Understand what to build
+Ask (only if not already clear):
+- What should the agent do? (one sentence)
+- Any specific framework preference? (OpenAI, CrewAI, LangGraph — default to OpenAI)
+- Pricing preference? (default: 0.50 USDM = `500000`)
+
+### Step 2 — Check plugin config
+Call `masumi_setup` to verify the plugin is configured (paymentServiceUrl + apiKey set).
+If not configured, show setup instructions and stop — nothing else works without it.
+
+### Step 3 — Generate the agent code
+Generate a complete, working agent with:
+- `agent.py` — full implementation using `masumi` pip package with `process_job`
+- `requirements.txt` — all deps including `masumi` and `python-dotenv`
+- `.env.example` — all required env vars with instructions
+- `README.md` — how to run, deploy, and use the agent
+
+Always use the `MasumiAgent` wrapper. Never implement the MIP-003 endpoints manually.
+Present the code inline in chat, clearly labeled.
+
+### Step 4 — Get a public URL
+The agent must be publicly accessible for registration. Ask the user:
+> "Do you have a deployment target, or would you like me to walk you through deploying to Railway/Render? Either way, once it's running with a public URL, give it to me and I'll handle registration."
+
+If they need deployment help, load `references/hosting.md` and guide them through Railway (simplest option).
+
+### Step 5 — Register the agent
+Once the user confirms the agent is running at a public URL, call `masumi_register_agent` with:
+- `name` and `description` from the agent spec
+- `api_url` from the user
+- `capability_name` (slugified from agent name)
+- `pricing_amount` (default `500000` = 0.50 USDM)
+- `network` (default `Preprod`)
+
+After registration:
+- Tell the user their `AGENT_IDENTIFIER`
+- Tell them to add it to `.env` and restart the agent
+- Confirm the agent will now appear on [preprod.sokosumi.com](https://preprod.sokosumi.com/agents)
+
+### Step 6 — Test hire
+After registration and restart, call `masumi_hire_agent` with sample input data to verify the full payment + execution loop works end-to-end.
+
+Report the result to the user. If successful: 🎉 they're live.
 
 ---
 

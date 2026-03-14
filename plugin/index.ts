@@ -25,6 +25,137 @@ function isConfigured(cfg: any): boolean {
 
 export default function (api: any) {
 
+  // ── Register Agent ─────────────────────────────────────────────────────────
+  api.registerTool({
+    name: "masumi_register_agent",
+    description: "Register a new agent on the Masumi Network via the Payment Service API. Use after the agent is deployed and running at a public URL. Returns the agentIdentifier to add to .env.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Human-readable agent name (shown on Sokosumi)"
+        },
+        description: {
+          type: "string",
+          description: "What the agent does — one or two sentences"
+        },
+        api_url: {
+          type: "string",
+          description: "Public URL where the agent is running (e.g. https://my-agent.up.railway.app)"
+        },
+        capability_name: {
+          type: "string",
+          description: "Unique capability slug (e.g. 'ad-copy-forge')"
+        },
+        capability_version: {
+          type: "string",
+          description: "Semver version (default: 1.0.0)"
+        },
+        pricing_amount: {
+          type: "number",
+          description: "Price in USDM micro-units (default: 500000 = 0.50 USDM)"
+        },
+        author_name: {
+          type: "string",
+          description: "Author name or organization"
+        },
+        author_contact: {
+          type: "string",
+          description: "Author email or URL (optional)"
+        },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description: "Tags for marketplace discoverability (optional)"
+        },
+        network: {
+          type: "string",
+          enum: ["Preprod", "Mainnet"],
+          description: "Network to register on (default: Preprod)"
+        }
+      },
+      required: ["name", "description", "api_url", "capability_name"]
+    },
+    async execute(_id: string, params: any) {
+      const cfg = api.config as any;
+
+      if (!isConfigured(cfg)) {
+        return { content: [{ type: "text", text: SETUP_MESSAGE }] };
+      }
+
+      const paymentServiceUrl = cfg.paymentServiceUrl;
+      const apiKey = cfg.apiKey;
+      const network = params.network || cfg?.network || "Preprod";
+
+      // Token unit for tUSDM (Preprod) or USDM (Mainnet)
+      const tokenUnit = network === "Mainnet"
+        ? "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d"
+        : "16a55b2a349361ff88c03788f93e1e966e5d689605d044fef722ddde0014df10745553444d";
+
+      const body: any = {
+        name: params.name,
+        description: params.description,
+        api_url: params.api_url,
+        capability: {
+          name: params.capability_name,
+          version: params.capability_version || "1.0.0"
+        },
+        pricing: [
+          {
+            unit: tokenUnit,
+            amount: String(params.pricing_amount ?? 500000)
+          }
+        ],
+        author: {
+          name: params.author_name || "MasumiForge"
+        }
+      };
+
+      if (params.author_contact) body.author.contact = params.author_contact;
+      if (params.tags?.length) body.tags = params.tags;
+
+      try {
+        const resp = await fetch(`${paymentServiceUrl}/registry/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            token: apiKey
+          },
+          body: JSON.stringify(body)
+        });
+
+        const data = await resp.json() as any;
+
+        if (data.status !== "success" && !data.agentIdentifier) {
+          return {
+            content: [{
+              type: "text",
+              text: `❌ Registration failed: ${data.error?.message || JSON.stringify(data)}`
+            }]
+          };
+        }
+
+        const agentId = data.agentIdentifier || data.data?.agentIdentifier;
+
+        return {
+          content: [{
+            type: "text",
+            text: `✅ Agent registered on Masumi (${network})!\n\n**AGENT_IDENTIFIER:** \`${agentId}\`\n\nNext steps:\n1. Add to your \`.env\`: \`AGENT_IDENTIFIER=${agentId}\`\n2. Restart your agent\n3. View on Sokosumi: https://${network === "Mainnet" ? "" : "preprod."}sokosumi.com/agents`
+          }]
+        };
+      } catch (err: any) {
+        return {
+          content: [{
+            type: "text",
+            text: `❌ Registration error: ${err.message}`
+          }]
+        };
+      }
+    }
+  }, { optional: true });
+
+
   // ── Setup ──────────────────────────────────────────────────────────────────
   api.registerTool({
     name: "masumi_setup",
