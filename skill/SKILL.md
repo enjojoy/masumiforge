@@ -78,44 +78,55 @@ For full request/response shapes → see `references/api.md`
 
 ## Implementing process_job
 
-Your entire agent logic lives in one async function. Use `create_masumi_app()` to wire it up:
+Use `masumi init` to scaffold a new project, or follow this structure manually.
 
+A Masumi agent has two files:
+
+**`agent.py`** — your business logic only:
 ```python
-import os
-import uvicorn
-from masumi import create_masumi_app, Config
-from dotenv import load_dotenv
+from masumi import run
+import logging
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
-async def process_job(job_id: str, input_data: dict) -> str:
-    """
-    Receive a job, do the work, return a string result.
-    """
-    topic = input_data.get("topic", "")
-    result = f"Processed: {topic}"
-    return result  # must be a string
-
-config = Config(
-    payment_service_url=os.environ["PAYMENT_SERVICE_URL"],
-    payment_api_key=os.environ["PAYMENT_API_KEY"],
-)
-
-app = create_masumi_app(
-    config=config,
-    agent_identifier=os.environ.get("AGENT_IDENTIFIER"),
-    network=os.environ.get("NETWORK", "Preprod"),
-    seller_vkey=os.environ.get("SELLER_VKEY"),
-    start_job_handler=process_job,
-    input_schema_handler=INPUT_SCHEMA,  # your input schema dict
-)
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+async def process_job(identifier_from_purchaser: str, input_data: dict):
+    """Implement your agent logic here. Return a string result."""
+    text = input_data.get("text", "")
+    result = f"Processed: {text}"
+    return result
 ```
 
-`create_masumi_app()` automatically:
+**`main.py`** — entry point that wires everything together:
+```python
+from dotenv import load_dotenv
+load_dotenv()
+
+from masumi import run
+from agent import process_job
+
+INPUT_SCHEMA = {
+    "input_data": [
+        {
+            "id": "text",
+            "type": "string",
+            "name": "Text Input"
+        }
+    ]
+}
+
+if __name__ == "__main__":
+    run(
+        start_job_handler=process_job,
+        input_schema_handler=INPUT_SCHEMA
+    )
+```
+
+Start the agent with:
+```bash
+masumi run main.py
+```
+
+The `masumi` CLI automatically:
 - Exposes all 5 MIP-003 endpoints
 - Computes MIP-004 input/output hashes
 - Handles payment verification via your Payment Service
