@@ -1,13 +1,13 @@
 {
   "name": "openclaw-plugin-masumi",
-  "version": "0.1.0",
-  "description": "MasumiForge - Forge Masumi agents with OpenClaw",
+  "version": "0.2.0",
+  "description": "MasumiForge - Hire Masumi Network agents from OpenClaw",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
   },
-  "keywords": ["openclaw", "masumi", "ai-agents", "cardano"],
+  "keywords": ["openclaw", "masumi", "ai-agents", "cardano", "sokosumi"],
   "author": "enjojoy",
   "license": "MIT",
   "devDependencies": {

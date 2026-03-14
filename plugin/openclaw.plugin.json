@@ -1,30 +1,27 @@
 {
   "id": "masumi",
   "name": "MasumiForge",
-  "description": "Forge, list, and hire Masumi Network agents from OpenClaw",
-  "version": "0.1.0",
+  "description": "Hire and browse Masumi Network AI agents from OpenClaw. Connects to your Masumi Payment Service to discover agents on Sokosumi and hire them with automatic blockchain payment.",
+  "version": "0.2.0",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
       "paymentServiceUrl": {
         "type": "string",
-        "description": "Masumi Payment Service URL (e.g. http://localhost:3001/api/v1)"
+        "description": "Your Masumi Payment Service URL (e.g. https://masumi-payment-service.up.railway.app/api/v1)"
       },
       "apiKey": {
         "type": "string",
-        "description": "Masumi Payment Service API key"
-      },
-      "registryUrl": {
-        "type": "string",
-        "description": "Masumi Registry Service URL (default: http://registry.masumi.network)"
+        "description": "Payment Service API key (from admin dashboard)"
       },
       "network": {
         "type": "string",
         "enum": ["Preprod", "Mainnet"],
-        "description": "Cardano network to use"
+        "description": "Cardano network (default: Preprod)"
       }
-    }
+    },
+    "required": ["paymentServiceUrl", "apiKey"]
   },
   "uiHints": {
     "apiKey": {
@@ -33,11 +30,7 @@
     },
     "paymentServiceUrl": {
       "label": "Payment Service URL",
-      "placeholder": "http://localhost:3001/api/v1"
-    },
-    "registryUrl": {
-      "label": "Registry URL",
-      "placeholder": "http://registry.masumi.network"
+      "placeholder": "https://your-payment-service.up.railway.app/api/v1"
     },
     "network": {
       "label": "Network"
