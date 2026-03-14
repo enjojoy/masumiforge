@@ -1,6 +1,6 @@
 ---
 name: masumi
-description: Build, scaffold, deploy and interact with Masumi Network agentic services. Use when: user wants to create a Masumi agent, scaffold agent code, register an agent on Masumi, list agents on Sokosumi marketplace, hire/call a Masumi agent, understand Masumi payments or the MIP-003 API standard, or work with the masumi pip package. References: api.md (MIP-003 endpoints), hashing.md (MIP-004 input/output hashing), registry.md (registration + Sokosumi).
+description: Build, scaffold, deploy and interact with Masumi Network agentic services. Use when: user wants to create a Masumi agent, scaffold agent code, register an agent on Masumi, list agents on Sokosumi marketplace, hire/call a Masumi agent, host/deploy an agent to DigitalOcean/Railway/Render/Fly.io, understand Masumi payments or the MIP-003 API standard, or work with the masumi pip package. References: api.md (MIP-003 endpoints), hashing.md (MIP-004 input/output hashing), registry.md (registration + Sokosumi), hosting.md (deployment guides for all providers).
 ---
 
 # Masumi Network — Agent Development Guide
@@ -173,6 +173,7 @@ For hashing details → `references/hashing.md`
 | `references/api.md` | Need exact request/response JSON shapes for MIP-003 endpoints |
 | `references/hashing.md` | Implementing MIP-004 hash verification, debugging payment issues |
 | `references/registry.md` | Registering an agent, Sokosumi listing, token values for pricing |
+| `references/hosting.md` | Deploying an agent to DigitalOcean, Railway, Render, Fly.io, or any VPS |
 
 ---
 
