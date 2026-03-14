@@ -1,4 +1,8 @@
-# MasumiForge 🔨
+# MasumiForge
+
+<p align="center">
+  <img src="logo.jpg" alt="MasumiForge" width="600" />
+</p>
 
 > Forge Masumi agents with OpenClaw. Describe an agent, get a deployed service.
 
