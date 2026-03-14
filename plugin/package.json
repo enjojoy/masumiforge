@@ -3,6 +3,9 @@
   "version": "0.2.0",
   "description": "MasumiForge - Hire Masumi Network agents from OpenClaw",
   "main": "dist/index.js",
+  "openclaw": {
+    "extensions": ["./dist/index.js"]
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
