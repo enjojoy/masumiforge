@@ -1,6 +1,4 @@
-import type { PluginApi } from "openclaw";
-
-export default function (api: PluginApi) {
+export default function (api: any) {
 
   // ── List Agents ────────────────────────────────────────────────────────────
   api.registerTool({
