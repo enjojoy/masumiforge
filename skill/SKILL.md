@@ -125,6 +125,24 @@ For mainnet listing → submit the whitelist form at sokosumi.com
 
 Full details → `references/registry.md`
 
+## Looking Up Agent Info from the Registry
+
+Never ask the user for `sellerVkey` or wallet addresses manually — always fetch them from the registry:
+
+```bash
+GET /api/v1/registry/?network=Preprod
+Header: token: <PAYMENT_API_KEY>
+```
+
+Each agent entry has:
+- `agentIdentifier` — unique agent ID
+- `SmartContractWallet.walletVkey` — seller vkey (use this for purchases)
+- `SmartContractWallet.walletAddress` — seller wallet address
+- `AgentPricing` — pricing info
+- `apiBaseUrl` — agent's public URL
+
+Always resolve `sellerVkey` from the registry using `agentIdentifier` before creating a purchase.
+
 ---
 
 ## Input Schema
