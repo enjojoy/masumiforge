@@ -31,8 +31,8 @@ Generate a complete, working agent following the `masumi init` two-file structur
 - `main.py` — entry point: imports `process_job`, defines `INPUT_SCHEMA`, calls `masumi.run(...)`
 - `requirements.txt` — `masumi`, `python-dotenv`, + task-specific deps
 - `.env.example` — all required env vars
-- `railway.toml` — Railway one-click deploy with env vars pre-defined (always include)
-- `Procfile` — `web: masumi run main.py`
+- `railway.toml` — Railway one-click deploy with `startCommand = "python main.py"` and env vars pre-defined (always include)
+- `Procfile` — `web: python main.py`
 - `README.md` — with Railway deploy button: `[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/github/OWNER/REPO)`
 
 Ask for the GitHub repo URL if not already known, so you can push the code directly.
