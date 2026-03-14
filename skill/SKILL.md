@@ -49,10 +49,13 @@ Once the agent is running at a public URL, call `masumi_register_agent` with:
 - `pricing_amount` (default `1000000` = 1.00 USDM)
 - `network` (default `Preprod`)
 
-After registration (takes 5-15 min on Preprod to confirm on-chain):
-- Give the user their `AGENT_IDENTIFIER`
-- Tell them to add it to Railway env vars and redeploy
-- Agent will appear on https://preprod.sokosumi.com/agents automatically
+The tool automatically:
+1. Resolves `sellingWalletVkey` from the payment service (no need to ask the user)
+2. Submits the registration
+3. Polls until `RegistrationConfirmed` on-chain (up to 15 min)
+4. Returns the `AGENT_IDENTIFIER` directly
+
+Tell the user to add `AGENT_IDENTIFIER` to their Railway env vars and redeploy.
 
 ### Step 6 — Test hire
 Call `masumi_hire_agent` with sample input to verify the full payment + execution loop.
