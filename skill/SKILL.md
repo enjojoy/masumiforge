@@ -126,6 +126,7 @@ from masumi import run
 from agent import process_job
 
 # Input schema uses masumi's array format (not JSON Schema)
+# Mark optional fields with: "validations": [{"validation": "optional"}]
 INPUT_SCHEMA = {
     "input_data": [
         {
@@ -135,6 +136,13 @@ INPUT_SCHEMA = {
             "data": {
                 "description": "The text to process"
             }
+        },
+        {
+            "id": "optional_param",
+            "type": "string",
+            "name": "Optional Param",
+            "data": {"description": "An optional field"},
+            "validations": [{"validation": "optional"}]
         }
     ]
 }
