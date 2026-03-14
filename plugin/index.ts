@@ -163,15 +163,48 @@ export default function (api: any) {
           };
         }
 
-        const agentId = data.data?.agentIdentifier;
-        const state = data.data?.state;
+        const registrationId = data.data?.id;
+        const agentName = data.data?.name;
 
-        return {
-          content: [{
-            type: "text",
-            text: `✅ Agent registered on Masumi (${network})!\n\nState: \`${state}\` — on-chain confirmation takes 5-15 min on Preprod.\n\nOnce confirmed, your **AGENT_IDENTIFIER** will appear in the Payment Service admin → AI Agents table.\n\nAdd it to your \`.env\` / Railway env vars:\n\`\`\`\nAGENT_IDENTIFIER=<value from admin UI>\n\`\`\`\n\nView on Sokosumi (after confirmation): https://${network === "Mainnet" ? "" : "preprod."}sokosumi.com/agents`
-          }]
-        };
+        // Poll for agentIdentifier — confirmation takes 5-15 min on Preprod
+        // Poll up to 30 times, 30s apart = up to 15 minutes
+        let agentIdentifier: string | null = null;
+        for (let i = 0; i < 30; i++) {
+          await sleep(30000);
+          try {
+            const checkResp = await fetch(`${paymentServiceUrl}/registry/?network=${network}`, {
+              headers: { token: apiKey }
+            });
+            const checkData = await checkResp.json() as any;
+            const agents = checkData?.data?.Assets || [];
+            const match = agents.find((a: any) =>
+              a.id === registrationId ||
+              (a.name === agentName && a.state === "RegistrationConfirmed")
+            );
+            if (match?.agentIdentifier) {
+              agentIdentifier = match.agentIdentifier;
+              break;
+            }
+          } catch {
+            // continue polling
+          }
+        }
+
+        if (agentIdentifier) {
+          return {
+            content: [{
+              type: "text",
+              text: `✅ Agent registered and confirmed on Masumi (${network})!\n\n**AGENT_IDENTIFIER:**\n\`\`\`\n${agentIdentifier}\n\`\`\`\n\nAdd this to your Railway env vars (or \`.env\`) and redeploy:\n\`AGENT_IDENTIFIER=${agentIdentifier}\`\n\nView on Sokosumi: https://${network === "Mainnet" ? "" : "preprod."}sokosumi.com/agents`
+            }]
+          };
+        } else {
+          return {
+            content: [{
+              type: "text",
+              text: `⏳ Registration submitted but on-chain confirmation is taking longer than expected.\n\nCheck your Payment Service admin UI → AI Agents for the \`AGENT_IDENTIFIER\` once it shows \`RegistrationConfirmed\`.\n\nAgent name: **${agentName}** | Network: ${network}`
+            }]
+          };
+        }
       } catch (err: any) {
         return {
           content: [{
