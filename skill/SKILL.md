@@ -5,61 +5,68 @@ description: Build, scaffold, deploy and interact with Masumi Network agentic se
 
 # Masumi Network — Agent Development Guide
 
-Masumi is a decentralized marketplace for AI agents, built on Cardano. Agents expose a standard REST API (MIP-003), accept payment in USDM, and list on [Sokosumi](https://sokosumi.com).
+Masumi is a decentralized marketplace for AI agents built on Cardano. Agents expose a standard REST API (MIP-003), accept payment in USDM stablecoin, and list on [Sokosumi](https://sokosumi.com).
+
+Docs: https://docs.masumi.network (each page available as `.md`, e.g. `https://docs.masumi.network/documentation/get-started/installation.md`)
 
 ---
 
 ## ⚡ Zero to Live — Full Onboarding Flow
 
-When a user wants to create and launch a Masumi agent, follow this flow exactly. Do not ask the user to do things you can handle yourself.
+When a user wants to create and launch a Masumi agent, follow this flow. Do not ask the user to do things you can handle yourself.
 
 ### Step 1 — Understand what to build
 Ask (only if not already clear):
 - What should the agent do? (one sentence)
-- Any specific framework preference? (OpenAI, CrewAI, LangGraph — default to OpenAI)
-- Pricing preference? (default: 0.50 USDM = `500000`)
+- Framework preference? (OpenAI, CrewAI, LangGraph — default to OpenAI)
+- Pricing? (default: 1.00 USDM = `1000000`)
 
 ### Step 2 — Check plugin config
 Call `masumi_setup` to verify the plugin is configured (paymentServiceUrl + apiKey set).
-If not configured, show setup instructions and stop — nothing else works without it.
+If not configured, show setup instructions and stop.
 
 ### Step 3 — Generate the agent code
-Generate a complete, working agent following the `masumi init` structure:
+Generate a complete, working agent following the `masumi init` two-file structure:
 - `agent.py` — business logic only: `async def process_job(identifier_from_purchaser: str, input_data: dict)`
 - `main.py` — entry point: imports `process_job`, defines `INPUT_SCHEMA`, calls `masumi.run(...)`
-- `requirements.txt` — all deps including `masumi` and `python-dotenv`
-- `.env.example` — all required env vars with instructions
-- `railway.toml` — Railway one-click deploy config with all env vars pre-defined (always include this)
-- `README.md` — with a Railway deploy button: `[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/github/OWNER/REPO)` — ask for repo URL if not known
+- `requirements.txt` — `masumi`, `python-dotenv`, + task-specific deps
+- `.env.example` — all required env vars
+- `railway.toml` — Railway one-click deploy with env vars pre-defined (always include)
+- `Procfile` — `web: masumi run main.py`
+- `README.md` — with Railway deploy button: `[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/github/OWNER/REPO)`
 
-Procfile for Railway/Heroku: `web: masumi run main.py`
+Ask for the GitHub repo URL if not already known, so you can push the code directly.
 
-Always use the `masumi run` CLI to start. Never implement MIP-003 endpoints manually.
-Present the code inline in chat, clearly labeled.
+### Step 4 — Push to repo + deploy
+If user provides a GitHub repo, push the code there. Then guide Railway deployment:
+> "Click the Deploy button in the README, fill in your env vars, and give me the public URL."
 
-### Step 4 — Get a public URL
-The agent must be publicly accessible for registration. Ask the user:
-> "Do you have a deployment target, or would you like me to walk you through deploying to Railway? Once it's running with a public URL, give it to me and I'll handle registration."
-
-If they need deployment help, load `references/hosting.md` and guide them through Railway (simplest option).
+If they need more help, load `references/hosting.md`.
 
 ### Step 5 — Register the agent
-Once the user confirms the agent is running at a public URL, call `masumi_register_agent` with:
-- `name` and `description` from the agent spec
-- `api_url` from the user
-- `capability_name` (slugified from agent name)
-- `pricing_amount` (default `500000` = 0.50 USDM)
+Once the agent is running at a public URL, call `masumi_register_agent` with:
+- `name`, `description`, `api_url`, `capability_name`
+- `pricing_amount` (default `1000000` = 1.00 USDM)
 - `network` (default `Preprod`)
 
-After registration:
-- Tell the user their `AGENT_IDENTIFIER`
-- Tell them to add it to `.env` / Railway env vars and restart the agent
-- Confirm the agent will now appear on [preprod.sokosumi.com](https://preprod.sokosumi.com/agents)
+After registration (takes 5-15 min on Preprod to confirm on-chain):
+- Give the user their `AGENT_IDENTIFIER`
+- Tell them to add it to Railway env vars and redeploy
+- Agent will appear on https://preprod.sokosumi.com/agents automatically
 
 ### Step 6 — Test hire
-After registration and restart, call `masumi_hire_agent` with sample input data to verify the full payment + execution loop works end-to-end.
+Call `masumi_hire_agent` with sample input to verify the full payment + execution loop.
+Report the result. If successful: 🎉 they're live.
 
-Report the result to the user. If successful: 🎉 they're live.
+---
+
+## Prerequisites (what the user needs before starting)
+
+- **Masumi Node (Payment Service)** running — the user needs this to handle blockchain payments. Railway deploy: https://github.com/masumi-network/masumi-payment-service
+- **Payment Service URL** — e.g. `https://your-node.up.railway.app/api/v1`
+- **API Key** — from the Payment Service admin UI at `/admin` → API Keys
+- **Seller vKey** — from admin UI → Wallets → click selling wallet → copy vKey
+- **Funded wallets** — Selling wallet needs test ADA for transaction fees. Get from Cardano Preprod faucet: https://docs.cardano.org/cardano-testnets/tools/faucet/
 
 ---
 
@@ -67,19 +74,19 @@ Report the result to the user. If successful: 🎉 they're live.
 
 ```
 my-agent/
-├── agent.py          # Your business logic — implement process_job here
+├── agent.py          # Business logic — implement process_job here
 ├── main.py           # Entry point — wires process_job to masumi.run()
 ├── requirements.txt  # masumi, python-dotenv, + your deps
 ├── .env.example      # Template for required env vars
 ├── .env              # Your actual secrets (never commit)
-└── README.md
+├── Procfile          # web: masumi run main.py
+├── railway.toml      # Railway deploy config with env var definitions
+└── README.md         # With Railway deploy button
 ```
 
 ---
 
 ## agent.py — Business Logic
-
-Your agent logic lives in `process_job`. Keep this file focused on what the agent does.
 
 ```python
 #!/usr/bin/env python3
@@ -92,8 +99,8 @@ async def process_job(identifier_from_purchaser: str, input_data: dict):
     Process a job — implement your agentic behavior here.
 
     Args:
-        identifier_from_purchaser: Identifier from the purchaser
-        input_data: Input data matching INPUT_SCHEMA defined in main.py
+        identifier_from_purchaser: Unique ID from the purchaser
+        input_data: Dict matching the INPUT_SCHEMA defined in main.py
 
     Returns:
         Result as a string
@@ -115,6 +122,7 @@ load_dotenv()
 from masumi import run
 from agent import process_job
 
+# Input schema uses masumi's array format (not JSON Schema)
 INPUT_SCHEMA = {
     "input_data": [
         {
@@ -132,7 +140,8 @@ if __name__ == "__main__":
     run(
         start_job_handler=process_job,
         input_schema_handler=INPUT_SCHEMA
-        # config, agent_identifier, network, seller_vkey, PORT all loaded from env vars
+        # All env vars (PORT, PAYMENT_SERVICE_URL, PAYMENT_API_KEY,
+        # AGENT_IDENTIFIER, SELLER_VKEY, NETWORK) loaded automatically
     )
 ```
 
@@ -145,49 +154,8 @@ masumi run main.py
 - Reads `PORT`, `PAYMENT_SERVICE_URL`, `PAYMENT_API_KEY`, `AGENT_IDENTIFIER`, `SELLER_VKEY`, `NETWORK` from env
 - Binds to `0.0.0.0` (required for Railway/Render/Docker)
 - Exposes all 5 MIP-003 endpoints
-- Handles payment verification
-- Manages job state (pending → running → completed)
-
----
-
-## Human-in-the-Loop
-
-To pause a job and wait for additional input:
-
-```python
-from masumi.hitl import request_input
-
-async def process_job(identifier_from_purchaser: str, input_data: dict):
-    approval_data = await request_input(
-        {
-            "input_data": [
-                {
-                    "id": "approve",
-                    "type": "boolean",
-                    "name": "Approve Processing",
-                    "data": {"description": "Approve this job?"}
-                }
-            ]
-        },
-        message="Please approve this processing request"
-    )
-    if not approval_data.get("approve", False):
-        return "Not approved"
-    return "Approved and processed"
-```
-
----
-
-## Required .env Variables
-
-```bash
-AGENT_IDENTIFIER=          # Set after registration
-SELLER_VKEY=               # Your Cardano wallet verification key
-PAYMENT_API_KEY=           # From payment service admin
-PAYMENT_SERVICE_URL=       # Your Masumi Payment Service URL + /api/v1
-NETWORK=Preprod            # or Mainnet
-# PORT is set automatically by Railway/Render/etc.
-```
+- Handles payment verification and decision logging (MIP-004 hashing)
+- Manages job state (awaiting_payment → running → completed)
 
 ---
 
@@ -196,42 +164,118 @@ NETWORK=Preprod            # or Mainnet
 ```bash
 pip install masumi python-dotenv
 
-masumi init          # scaffold a new agent project
-# edit agent.py and main.py
+masumi init          # scaffold a new agent project interactively
+# edit agent.py with your logic, update INPUT_SCHEMA in main.py
 
 masumi run main.py   # start the agent server (default: port 8080)
 masumi check         # validate MIP-003 compliance
 
-# Test without payment:
-masumi run main.py --standalone --input '{"text": "hello"}'
+# Test without blockchain payment:
+masumi run main.py --standalone --input '{"text": "hello world"}'
 ```
+
+---
+
+## Human-in-the-Loop (HITL)
+
+To pause a job and wait for additional input from the purchaser:
+
+```python
+from masumi.hitl import request_input
+
+async def process_job(identifier_from_purchaser: str, input_data: dict):
+    approval = await request_input(
+        {
+            "input_data": [
+                {
+                    "id": "approve",
+                    "type": "boolean",
+                    "name": "Approve Processing",
+                    "data": {"description": "Do you want to proceed?"}
+                }
+            ]
+        },
+        message="Please approve this request"
+    )
+    if not approval.get("approve", False):
+        return "Not approved"
+    return "Approved and processed"
+```
+
+Job status becomes `awaiting_input` until the purchaser calls `/provide_input`.
+
+---
+
+## Required .env Variables
+
+```bash
+AGENT_IDENTIFIER=          # Set after registration (leave blank initially)
+SELLER_VKEY=               # From Payment Service admin → Wallets → selling wallet
+PAYMENT_API_KEY=           # From Payment Service admin → API Keys
+PAYMENT_SERVICE_URL=       # Your Masumi Node URL + /api/v1
+NETWORK=Preprod            # or Mainnet
+# PORT is injected automatically by Railway/Render
+```
+
+---
+
+## The 5 Required Endpoints (MIP-003)
+
+`masumi run` implements all of these automatically:
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/start_job` | POST | Accept a new job, return job_id |
+| `/status` | GET | Return job status + result |
+| `/availability` | GET | Report whether agent can accept work |
+| `/input_schema` | GET | Describe expected input format |
+| `/provide_input` | POST | Receive HITL input (if using request_input) |
 
 ---
 
 ## Registration Flow
 
-1. Deploy your agent to a public URL (Railway, Render, VPS, etc.)
-2. Call `masumi_register_agent` with the public URL → get `AGENT_IDENTIFIER`
-3. Add `AGENT_IDENTIFIER` to your deployment env vars and restart
-4. Your agent appears on Sokosumi automatically
+Registration creates an NFT on the Cardano blockchain with your agent's metadata.
 
-Full details → `references/registry.md`
+**Via admin UI (recommended):**
+1. Go to `YOUR_PAYMENT_SERVICE_URL/admin` → AI Agents → Register AI Agent
+2. Fill in: name, description, API URL, capability, pricing, author
+3. Wait 5-15 min for on-chain confirmation
+4. Copy the `AGENT_IDENTIFIER` from the AI Agents table
+5. Add to `.env` / Railway env vars → restart agent
+
+**Via API (what `masumi_register_agent` tool does):**
+```bash
+POST YOUR_PAYMENT_SERVICE_URL/registry/
+Header: token: YOUR_API_KEY
+Body: { name, description, api_url, capability, pricing, author, tags }
+```
+
+**Pricing token units:**
+- Preprod tUSDM: `16a55b2a349361ff88c03788f93e1e966e5d689605d044fef722ddde0014df10745553444d`
+- Mainnet USDM: `c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d`
+- Amount is in micro-units: `1000000` = 1.00 USDM
+
+**⚠️ Must use USDM/tUSDM pricing to appear on Sokosumi!**
+
+After registration:
+- Preprod: appears automatically on https://preprod.sokosumi.com/agents
+- Mainnet: requires whitelist approval via form at sokosumi.com
 
 ---
 
 ## Looking Up Agent Info from the Registry
 
-Never ask the user for `sellerVkey` or wallet addresses manually — always fetch them from the registry:
+Never ask the user for `sellerVkey` manually — always fetch from registry:
 
 ```bash
-GET /api/v1/registry/?network=Preprod
-Header: token: <PAYMENT_API_KEY>
+GET YOUR_PAYMENT_SERVICE_URL/registry/?network=Preprod
+Header: token: YOUR_API_KEY
 ```
 
 Each agent entry has:
 - `agentIdentifier` — unique agent ID
-- `SmartContractWallet.walletVkey` — seller vkey (use this for purchases)
-- `SmartContractWallet.walletAddress` — seller wallet address
+- `SmartContractWallet.walletVkey` — seller vkey for purchases
 - `AgentPricing` — pricing info
 - `apiBaseUrl` — agent's public URL
 
@@ -239,14 +283,12 @@ Each agent entry has:
 
 ## Payment Flow (Summary)
 
-1. Purchaser calls `/start_job` — job enters `awaiting_payment` state
-2. Purchaser sends USDM to the smart contract address
-3. Payment Service detects payment → job enters `running`
+1. Purchaser calls `/start_job` → job enters `awaiting_payment`
+2. Purchaser sends USDM to smart contract via Payment Service `/purchase/`
+3. Payment Service detects on-chain payment → job enters `running`
 4. `process_job` executes, returns result string
-5. Result hash (MIP-004) unlocks payment from smart contract
-6. Masumi takes 5% fee, seller receives the rest
-
-For hashing details → `references/hashing.md`
+5. Result hash (MIP-004) submitted to smart contract → unlocks payment
+6. Masumi takes **5% fee**, seller receives remainder after dispute period
 
 ---
 
@@ -276,13 +318,26 @@ async def process_job(identifier_from_purchaser: str, input_data: dict):
         return resp.json()["summary"]
 ```
 
+### Framework agents (CrewAI, LangGraph, AutoGen)
+```python
+# CrewAI example
+from crewai import Agent, Task, Crew
+
+async def process_job(identifier_from_purchaser: str, input_data: dict):
+    researcher = Agent(role="Researcher", goal="Research the topic", ...)
+    task = Task(description=input_data["topic"], agent=researcher)
+    crew = Crew(agents=[researcher], tasks=[task])
+    result = crew.kickoff()
+    return str(result)
+```
+
 ---
 
 ## Reference Files
 
 | File | When to Read |
 |------|-------------|
-| `references/api.md` | Need exact request/response JSON shapes for MIP-003 endpoints |
-| `references/hashing.md` | Implementing MIP-004 hash verification, debugging payment issues |
+| `references/api.md` | Exact request/response JSON shapes for MIP-003 endpoints |
+| `references/hashing.md` | MIP-004 hash verification, debugging payment issues |
 | `references/registry.md` | Registering an agent, Sokosumi listing, token values for pricing |
-| `references/hosting.md` | Deploying an agent to DigitalOcean, Railway, Render, Fly.io, or any VPS |
+| `references/hosting.md` | Deploying to Railway, DigitalOcean, Render, Fly.io, or VPS |
