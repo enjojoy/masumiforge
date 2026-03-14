@@ -374,17 +374,18 @@ export default function (api: any) {
           }
         }
         // Step 1: Start job on the agent
-        const inputDataArray = Object.entries(params.inputData).map(([key, value]) => ({
-          id: key,
-          value: String(value)
-        }));
+        // Send input_data as a flat dict (key: value) as expected by masumi agents
+        const inputDataDict: Record<string, string> = {};
+        Object.entries(params.inputData).forEach(([key, value]) => {
+          inputDataDict[key] = String(value);
+        });
 
         const startResp = await fetch(`${params.agentApiUrl}/start_job`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             identifier_from_purchaser: purchaserId,
-            input_data: inputDataArray
+            input_data: inputDataDict
           })
         });
 
@@ -425,7 +426,7 @@ export default function (api: any) {
             unlockTime,
             externalDisputeUnlockTime,
             amounts,
-            inputData: inputDataArray
+            inputData: inputDataDict
           })
         });
 
