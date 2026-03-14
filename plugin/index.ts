@@ -1,4 +1,52 @@
+const SETUP_MESSAGE = `⚙️ **Masumi plugin needs configuration.**
+
+To use Masumi tools, configure the plugin in OpenClaw:
+
+**Option 1 — CLI:**
+\`\`\`
+openclaw plugins config masumi
+\`\`\`
+
+**Option 2 — Settings UI:**
+Go to Settings → Plugins → MasumiForge
+
+**Required fields:**
+- \`paymentServiceUrl\` — Your Masumi Payment Service URL (e.g. \`https://your-service.up.railway.app/api/v1\`)
+- \`apiKey\` — Payment Service API key (from your admin dashboard)
+
+**Optional:**
+- \`network\` — \`Preprod\` (default) or \`Mainnet\`
+
+Once configured, try again!`;
+
+function isConfigured(cfg: any): boolean {
+  return !!(cfg?.paymentServiceUrl && cfg?.apiKey);
+}
+
 export default function (api: any) {
+
+  // ── Setup ──────────────────────────────────────────────────────────────────
+  api.registerTool({
+    name: "masumi_setup",
+    description: "Show Masumi plugin setup instructions. Use when the user asks how to configure Masumi, set up the payment service, or when other Masumi tools report missing configuration.",
+    parameters: {
+      type: "object",
+      properties: {}
+    },
+    async execute(_id: string, _params: any) {
+      const cfg = api.config as any;
+      if (isConfigured(cfg)) {
+        return {
+          content: [{
+            type: "text",
+            text: `✅ Masumi is already configured!\n\n- **Payment Service:** ${cfg.paymentServiceUrl}\n- **Network:** ${cfg.network || "Preprod"}\n- **API Key:** set ✓`
+          }]
+        };
+      }
+      return { content: [{ type: "text", text: SETUP_MESSAGE }] };
+    }
+  }, { optional: true });
+
 
   // ── List Agents ────────────────────────────────────────────────────────────
   api.registerTool({
@@ -24,8 +72,13 @@ export default function (api: any) {
     },
     async execute(_id: string, params: any) {
       const cfg = api.config as any;
-      const paymentServiceUrl = cfg?.paymentServiceUrl || "https://payment.masumi.network/api/v1";
-      const apiKey = cfg?.apiKey || "";
+
+      if (!isConfigured(cfg)) {
+        return { content: [{ type: "text", text: SETUP_MESSAGE }] };
+      }
+
+      const paymentServiceUrl = cfg.paymentServiceUrl;
+      const apiKey = cfg.apiKey;
       const network = params.network || cfg?.network || "Preprod";
       const limit = params.limit || 10;
 
@@ -99,18 +152,14 @@ export default function (api: any) {
     },
     async execute(_id: string, params: any) {
       const cfg = api.config as any;
-      const paymentServiceUrl = cfg?.paymentServiceUrl;
-      const apiKey = cfg?.apiKey;
-      const network = params.network || cfg?.network || "Preprod";
 
-      if (!paymentServiceUrl || !apiKey) {
-        return {
-          content: [{
-            type: "text",
-            text: "❌ Masumi plugin not configured. Set paymentServiceUrl and apiKey in plugin settings."
-          }]
-        };
+      if (!isConfigured(cfg)) {
+        return { content: [{ type: "text", text: SETUP_MESSAGE }] };
       }
+
+      const paymentServiceUrl = cfg.paymentServiceUrl;
+      const apiKey = cfg.apiKey;
+      const network = params.network || cfg?.network || "Preprod";
 
       const purchaserId = generateHexId(26);
 
