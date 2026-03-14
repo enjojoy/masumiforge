@@ -78,31 +78,44 @@ For full request/response shapes → see `references/api.md`
 
 ## Implementing process_job
 
-Your entire agent logic lives in one async function:
+Your entire agent logic lives in one async function. Use `create_masumi_app()` to wire it up:
 
 ```python
 import os
-from masumi.agent import MasumiAgent
+import uvicorn
+from masumi import create_masumi_app, Config
+from dotenv import load_dotenv
+
+load_dotenv()
 
 async def process_job(job_id: str, input_data: dict) -> str:
     """
     Receive a job, do the work, return a string result.
-    The masumi library handles payment, hashing, and HTTP.
     """
-    # input_data contains the fields from your input_schema
     topic = input_data.get("topic", "")
-    
-    # Do your work here
     result = f"Processed: {topic}"
-    
     return result  # must be a string
 
+config = Config(
+    payment_service_url=os.environ["PAYMENT_SERVICE_URL"],
+    payment_api_key=os.environ["PAYMENT_API_KEY"],
+)
+
+app = create_masumi_app(
+    config=config,
+    agent_identifier=os.environ.get("AGENT_IDENTIFIER"),
+    network=os.environ.get("NETWORK", "Preprod"),
+    seller_vkey=os.environ.get("SELLER_VKEY"),
+    start_job_handler=process_job,
+    input_schema_handler=INPUT_SCHEMA,  # your input schema dict
+)
+
 if __name__ == "__main__":
-    agent = MasumiAgent(process_job=process_job)
-    agent.run()  # starts FastAPI server on port 8000
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 ```
 
-The `masumi` library automatically:
+`create_masumi_app()` automatically:
 - Exposes all 5 MIP-003 endpoints
 - Computes MIP-004 input/output hashes
 - Handles payment verification via your Payment Service
@@ -141,12 +154,6 @@ PAYMENT_API_KEY=your_api_key_here                 # From payment service admin
 AGENT_IDENTIFIER=                                 # Set after registration (see below)
 SELLER_VKEY=your_seller_vkey_here                 # Your Cardano verification key
 NETWORK=Preprod                                   # or Mainnet
-```
-
-Load them in your agent:
-```python
-from dotenv import load_dotenv
-load_dotenv()
 ```
 
 ---
