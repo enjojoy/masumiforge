@@ -1,0 +1,10 @@
+Summarize GitHub PRs for a given repo
+Monitor crypto prices and alert on thresholds
+Generate LinkedIn posts from a topic and tone
+Research a company and return a dossier
+Translate documents and preserve formatting
+Extract structured data from PDFs
+Generate unit tests for a given code snippet
+Summarize YouTube video transcripts
+Monitor a website for changes and summarize diffs
+Answer questions about a codebase
