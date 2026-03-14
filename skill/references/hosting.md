@@ -88,7 +88,61 @@ certbot --nginx -d your-domain.com
 
 Railway can deploy from GitHub in minutes with no server management.
 
-### Setup
+### One-click deploy button
+
+Add this to your `README.md` to get a one-click deploy button that pre-fills env vars:
+
+```markdown
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/YOUR_USERNAME/YOUR_REPO)
+```
+
+For the button to show env var fields in the Railway UI, include a `railway.toml` in your repo:
+
+### railway.toml (required for one-click deploy with pre-filled env vars)
+
+```toml
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python agent.py"
+healthcheckPath = "/availability"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[deploy.envVars]]
+name = "PAYMENT_SERVICE_URL"
+description = "Your Masumi Payment Service URL"
+required = true
+
+[[deploy.envVars]]
+name = "PAYMENT_API_KEY"
+description = "Payment Service API key from your Masumi admin dashboard"
+required = true
+
+[[deploy.envVars]]
+name = "SELLER_VKEY"
+description = "Your Cardano wallet verification key"
+required = true
+
+[[deploy.envVars]]
+name = "OPENAI_API_KEY"
+description = "Your OpenAI API key"
+required = true
+
+[[deploy.envVars]]
+name = "NETWORK"
+description = "Cardano network: Preprod or Mainnet"
+default = "Preprod"
+
+[[deploy.envVars]]
+name = "AGENT_IDENTIFIER"
+description = "Set after registering on Masumi (leave blank for now)"
+required = false
+```
+
+### Manual deploy
 
 1. Push your agent to GitHub
 2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
@@ -96,21 +150,7 @@ Railway can deploy from GitHub in minutes with no server management.
 4. Add environment variables in the Railway dashboard (same as your `.env`)
 5. Railway auto-detects Python and deploys
 
-### railway.json (optional, for port config)
-
-```json
-{
-  "build": {
-    "builder": "NIXPACKS"
-  },
-  "deploy": {
-    "startCommand": "python agent.py",
-    "healthcheckPath": "/availability"
-  }
-}
-```
-
-### Procfile (alternative)
+### Procfile (alternative to railway.toml)
 
 ```
 web: python agent.py

@@ -28,7 +28,8 @@ Generate a complete, working agent with:
 - `agent.py` — full implementation using `masumi` pip package with `process_job`
 - `requirements.txt` — all deps including `masumi` and `python-dotenv`
 - `.env.example` — all required env vars with instructions
-- `README.md` — how to run, deploy, and use the agent
+- `railway.toml` — Railway one-click deploy config with all env vars pre-defined (always include this)
+- `README.md` — with a Railway deploy button using the correct format: `[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/OWNER/REPO)` — ask the user for the repo URL if not known
 
 Always use the `MasumiAgent` wrapper. Never implement the MIP-003 endpoints manually.
 Present the code inline in chat, clearly labeled.
