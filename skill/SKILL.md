@@ -24,19 +24,22 @@ Call `masumi_setup` to verify the plugin is configured (paymentServiceUrl + apiK
 If not configured, show setup instructions and stop — nothing else works without it.
 
 ### Step 3 — Generate the agent code
-Generate a complete, working agent with:
-- `agent.py` — full implementation using `masumi` pip package with `process_job`
+Generate a complete, working agent following the `masumi init` structure:
+- `agent.py` — business logic only: `async def process_job(identifier_from_purchaser: str, input_data: dict)`
+- `main.py` — entry point: imports `process_job`, defines `INPUT_SCHEMA`, calls `masumi.run(...)`
 - `requirements.txt` — all deps including `masumi` and `python-dotenv`
 - `.env.example` — all required env vars with instructions
 - `railway.toml` — Railway one-click deploy config with all env vars pre-defined (always include this)
-- `README.md` — with a Railway deploy button using the correct format: `[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/OWNER/REPO)` — ask the user for the repo URL if not known
+- `README.md` — with a Railway deploy button: `[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/github/OWNER/REPO)` — ask for repo URL if not known
 
-Always use the `MasumiAgent` wrapper. Never implement the MIP-003 endpoints manually.
+Procfile for Railway/Heroku: `web: masumi run main.py`
+
+Always use the `masumi run` CLI to start. Never implement MIP-003 endpoints manually.
 Present the code inline in chat, clearly labeled.
 
 ### Step 4 — Get a public URL
 The agent must be publicly accessible for registration. Ask the user:
-> "Do you have a deployment target, or would you like me to walk you through deploying to Railway/Render? Either way, once it's running with a public URL, give it to me and I'll handle registration."
+> "Do you have a deployment target, or would you like me to walk you through deploying to Railway? Once it's running with a public URL, give it to me and I'll handle registration."
 
 If they need deployment help, load `references/hosting.md` and guide them through Railway (simplest option).
 
@@ -50,7 +53,7 @@ Once the user confirms the agent is running at a public URL, call `masumi_regist
 
 After registration:
 - Tell the user their `AGENT_IDENTIFIER`
-- Tell them to add it to `.env` and restart the agent
+- Tell them to add it to `.env` / Railway env vars and restart the agent
 - Confirm the agent will now appear on [preprod.sokosumi.com](https://preprod.sokosumi.com/agents)
 
 ### Step 6 — Test hire
@@ -60,44 +63,52 @@ Report the result to the user. If successful: 🎉 they're live.
 
 ---
 
-## The 5 Required Endpoints (MIP-003)
+## Project Structure (masumi init)
 
-Every Masumi agent **must** implement these endpoints. The `masumi` pip package handles all of them automatically when you implement `process_job`.
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/start_job` | POST | Accept a new job, return job_id |
-| `/status` | GET | Return job status + result |
-| `/availability` | GET | Report whether agent can accept work |
-| `/input_schema` | GET | Describe expected input format |
-| `/demo` | GET | Return example input/output |
-
-For full request/response shapes → see `references/api.md`
+```
+my-agent/
+├── agent.py          # Your business logic — implement process_job here
+├── main.py           # Entry point — wires process_job to masumi.run()
+├── requirements.txt  # masumi, python-dotenv, + your deps
+├── .env.example      # Template for required env vars
+├── .env              # Your actual secrets (never commit)
+└── README.md
+```
 
 ---
 
-## Implementing process_job
+## agent.py — Business Logic
 
-Use `masumi init` to scaffold a new project, or follow this structure manually.
+Your agent logic lives in `process_job`. Keep this file focused on what the agent does.
 
-A Masumi agent has two files:
-
-**`agent.py`** — your business logic only:
 ```python
-from masumi import run
+#!/usr/bin/env python3
 import logging
 
 logger = logging.getLogger(__name__)
 
 async def process_job(identifier_from_purchaser: str, input_data: dict):
-    """Implement your agent logic here. Return a string result."""
+    """
+    Process a job — implement your agentic behavior here.
+
+    Args:
+        identifier_from_purchaser: Identifier from the purchaser
+        input_data: Input data matching INPUT_SCHEMA defined in main.py
+
+    Returns:
+        Result as a string
+    """
     text = input_data.get("text", "")
-    result = f"Processed: {text}"
-    return result
+    # ... your logic here ...
+    return f"Processed: {text}"
 ```
 
-**`main.py`** — entry point that wires everything together:
+---
+
+## main.py — Entry Point
+
 ```python
+#!/usr/bin/env python3
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -109,7 +120,10 @@ INPUT_SCHEMA = {
         {
             "id": "text",
             "type": "string",
-            "name": "Text Input"
+            "name": "Text Input",
+            "data": {
+                "description": "The text to process"
+            }
         }
     ]
 }
@@ -118,18 +132,20 @@ if __name__ == "__main__":
     run(
         start_job_handler=process_job,
         input_schema_handler=INPUT_SCHEMA
+        # config, agent_identifier, network, seller_vkey, PORT all loaded from env vars
     )
 ```
 
-Start the agent with:
+Start with:
 ```bash
 masumi run main.py
 ```
 
-The `masumi` CLI automatically:
+`masumi run` automatically:
+- Reads `PORT`, `PAYMENT_SERVICE_URL`, `PAYMENT_API_KEY`, `AGENT_IDENTIFIER`, `SELLER_VKEY`, `NETWORK` from env
+- Binds to `0.0.0.0` (required for Railway/Render/Docker)
 - Exposes all 5 MIP-003 endpoints
-- Computes MIP-004 input/output hashes
-- Handles payment verification via your Payment Service
+- Handles payment verification
 - Manages job state (pending → running → completed)
 
 ---
@@ -139,20 +155,25 @@ The `masumi` CLI automatically:
 To pause a job and wait for additional input:
 
 ```python
-from masumi.agent import MasumiAgent, request_input
+from masumi.hitl import request_input
 
-async def process_job(job_id: str, input_data: dict) -> str:
-    # Ask for clarification mid-job
-    clarification = await request_input(
-        job_id=job_id,
-        prompt="Please provide the GitHub token to access private repos"
+async def process_job(identifier_from_purchaser: str, input_data: dict):
+    approval_data = await request_input(
+        {
+            "input_data": [
+                {
+                    "id": "approve",
+                    "type": "boolean",
+                    "name": "Approve Processing",
+                    "data": {"description": "Approve this job?"}
+                }
+            ]
+        },
+        message="Please approve this processing request"
     )
-    # Job pauses here (status → awaiting_input)
-    # Resumes when purchaser POSTs to /provide_input
-    
-    token = clarification.get("github_token")
-    # continue processing...
-    return result
+    if not approval_data.get("approve", False):
+        return "Not approved"
+    return "Approved and processed"
 ```
 
 ---
@@ -160,27 +181,43 @@ async def process_job(job_id: str, input_data: dict) -> str:
 ## Required .env Variables
 
 ```bash
-PAYMENT_SERVICE_URL=http://localhost:3001/api/v1  # Your Masumi Payment Service
-PAYMENT_API_KEY=your_api_key_here                 # From payment service admin
-AGENT_IDENTIFIER=                                 # Set after registration (see below)
-SELLER_VKEY=your_seller_vkey_here                 # Your Cardano verification key
-NETWORK=Preprod                                   # or Mainnet
+AGENT_IDENTIFIER=          # Set after registration
+SELLER_VKEY=               # Your Cardano wallet verification key
+PAYMENT_API_KEY=           # From payment service admin
+PAYMENT_SERVICE_URL=       # Your Masumi Payment Service URL + /api/v1
+NETWORK=Preprod            # or Mainnet
+# PORT is set automatically by Railway/Render/etc.
+```
+
+---
+
+## Quick Start (local dev)
+
+```bash
+pip install masumi python-dotenv
+
+masumi init          # scaffold a new agent project
+# edit agent.py and main.py
+
+masumi run main.py   # start the agent server (default: port 8080)
+masumi check         # validate MIP-003 compliance
+
+# Test without payment:
+masumi run main.py --standalone --input '{"text": "hello"}'
 ```
 
 ---
 
 ## Registration Flow
 
-1. Run your agent: `masumi run agent.py`
-2. Open the Payment Service admin UI: `http://localhost:3001/admin`
-3. Register your agent with name, description, API URL, pricing
-4. Copy the `AGENT_IDENTIFIER` you receive
-5. Add it to your `.env`
-6. Your agent is now listed on Sokosumi automatically (Preprod)
-
-For mainnet listing → submit the whitelist form at sokosumi.com
+1. Deploy your agent to a public URL (Railway, Render, VPS, etc.)
+2. Call `masumi_register_agent` with the public URL → get `AGENT_IDENTIFIER`
+3. Add `AGENT_IDENTIFIER` to your deployment env vars and restart
+4. Your agent appears on Sokosumi automatically
 
 Full details → `references/registry.md`
+
+---
 
 ## Looking Up Agent Info from the Registry
 
@@ -198,34 +235,6 @@ Each agent entry has:
 - `AgentPricing` — pricing info
 - `apiBaseUrl` — agent's public URL
 
-Always resolve `sellerVkey` from the registry using `agentIdentifier` before creating a purchase.
-
----
-
-## Input Schema
-
-Define what your agent expects by setting `input_schema` in your agent:
-
-```python
-INPUT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "repo": {
-            "type": "string",
-            "description": "GitHub repository (e.g. owner/repo)"
-        },
-        "limit": {
-            "type": "integer",
-            "description": "Max PRs to summarize",
-            "default": 10
-        }
-    },
-    "required": ["repo"]
-}
-
-agent = MasumiAgent(process_job=process_job, input_schema=INPUT_SCHEMA)
-```
-
 ---
 
 ## Payment Flow (Summary)
@@ -241,6 +250,34 @@ For hashing details → `references/hashing.md`
 
 ---
 
+## Common Patterns
+
+### Using an LLM
+```python
+from openai import AsyncOpenAI
+
+client = AsyncOpenAI()
+
+async def process_job(identifier_from_purchaser: str, input_data: dict):
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": input_data["prompt"]}]
+    )
+    return response.choices[0].message.content
+```
+
+### Calling an external API
+```python
+import httpx
+
+async def process_job(identifier_from_purchaser: str, input_data: dict):
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"https://api.example.com/data/{input_data['id']}")
+        return resp.json()["summary"]
+```
+
+---
+
 ## Reference Files
 
 | File | When to Read |
@@ -249,34 +286,3 @@ For hashing details → `references/hashing.md`
 | `references/hashing.md` | Implementing MIP-004 hash verification, debugging payment issues |
 | `references/registry.md` | Registering an agent, Sokosumi listing, token values for pricing |
 | `references/hosting.md` | Deploying an agent to DigitalOcean, Railway, Render, Fly.io, or any VPS |
-
----
-
-## Common Patterns
-
-### Calling an external API
-```python
-import httpx
-
-async def process_job(job_id: str, input_data: dict) -> str:
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"https://api.example.com/data/{input_data['id']}")
-        return resp.json()["summary"]
-```
-
-### Using an LLM
-```python
-from openai import AsyncOpenAI
-
-client = AsyncOpenAI()
-
-async def process_job(job_id: str, input_data: dict) -> str:
-    response = await client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": input_data["prompt"]}]
-    )
-    return response.choices[0].message.content
-```
-
-### Framework agents (CrewAI, LangGraph, AutoGen)
-Use `masumi init --framework crewai` to scaffold with framework-specific boilerplate, or ask MasumiForge: "forge me a crewai agent that..."
