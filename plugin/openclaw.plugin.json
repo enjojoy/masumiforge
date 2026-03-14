@@ -5,7 +5,6 @@
   "version": "0.2.0",
   "configSchema": {
     "type": "object",
-    "additionalProperties": false,
     "properties": {
       "paymentServiceUrl": {
         "type": "string",
@@ -17,11 +16,9 @@
       },
       "network": {
         "type": "string",
-        "enum": ["Preprod", "Mainnet"],
-        "description": "Cardano network (default: Preprod)"
+        "description": "Cardano network: Preprod or Mainnet (default: Preprod)"
       }
-    },
-    "required": []
+    }
   },
   "uiHints": {
     "apiKey": {
@@ -33,7 +30,8 @@
       "placeholder": "https://your-payment-service.up.railway.app/api/v1"
     },
     "network": {
-      "label": "Network"
+      "label": "Network",
+      "placeholder": "Preprod"
     }
   }
 }
