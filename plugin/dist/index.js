@@ -146,7 +146,7 @@ function default_1(api) {
                 };
             }
         }
-    }, { optional: true });
+    });
     // ── Setup ──────────────────────────────────────────────────────────────────
     api.registerTool({
         name: "masumi_setup",
@@ -167,7 +167,7 @@ function default_1(api) {
             }
             return { content: [{ type: "text", text: SETUP_MESSAGE }] };
         }
-    }, { optional: true });
+    });
     // ── List Agents ────────────────────────────────────────────────────────────
     api.registerTool({
         name: "masumi_list_agents",
@@ -233,7 +233,7 @@ function default_1(api) {
                 return { content: [{ type: "text", text: `Failed to list agents: ${err.message}` }] };
             }
         }
-    }, { optional: true });
+    });
     // ── Hire Agent ─────────────────────────────────────────────────────────────
     api.registerTool({
         name: "masumi_hire_agent",
@@ -400,7 +400,7 @@ function default_1(api) {
                 };
             }
         }
-    }, { optional: true });
+    });
 }
 // ── Helpers ────────────────────────────────────────────────────────────────
 function generateHexId(length) {

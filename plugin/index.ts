@@ -153,7 +153,7 @@ export default function (api: any) {
         };
       }
     }
-  }, { optional: true });
+  });
 
 
   // ── Setup ──────────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ export default function (api: any) {
       }
       return { content: [{ type: "text", text: SETUP_MESSAGE }] };
     }
-  }, { optional: true });
+  });
 
 
   // ── List Agents ────────────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ export default function (api: any) {
         return { content: [{ type: "text", text: `Failed to list agents: ${err.message}` }] };
       }
     }
-  }, { optional: true });
+  });
 
 
   // ── Hire Agent ─────────────────────────────────────────────────────────────
@@ -438,7 +438,7 @@ export default function (api: any) {
         };
       }
     }
-  }, { optional: true });
+  });
 
 }
 
