@@ -78,7 +78,7 @@ function default_1(api) {
             required: ["name", "description", "api_url", "capability_name"]
         },
         async execute(_id, params) {
-            const cfg = api.config;
+            const cfg = (api.pluginConfig ?? api.config?.plugins?.entries?.masumi?.config ?? {});
             if (!isConfigured(cfg)) {
                 return { content: [{ type: "text", text: SETUP_MESSAGE }] };
             }
@@ -156,7 +156,7 @@ function default_1(api) {
             properties: {}
         },
         async execute(_id, _params) {
-            const cfg = api.config;
+            const cfg = (api.pluginConfig ?? api.config?.plugins?.entries?.masumi?.config ?? {});
             if (isConfigured(cfg)) {
                 return {
                     content: [{
@@ -191,7 +191,7 @@ function default_1(api) {
             }
         },
         async execute(_id, params) {
-            const cfg = api.config;
+            const cfg = (api.pluginConfig ?? api.config?.plugins?.entries?.masumi?.config ?? {});
             if (!isConfigured(cfg)) {
                 return { content: [{ type: "text", text: SETUP_MESSAGE }] };
             }
@@ -262,7 +262,7 @@ function default_1(api) {
             required: ["agentIdentifier", "agentApiUrl", "inputData"]
         },
         async execute(_id, params) {
-            const cfg = api.config;
+            const cfg = (api.pluginConfig ?? api.config?.plugins?.entries?.masumi?.config ?? {});
             if (!isConfigured(cfg)) {
                 return { content: [{ type: "text", text: SETUP_MESSAGE }] };
             }

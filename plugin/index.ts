@@ -78,7 +78,7 @@ export default function (api: any) {
       required: ["name", "description", "api_url", "capability_name"]
     },
     async execute(_id: string, params: any) {
-      const cfg = api.config as any;
+      const cfg = (api.pluginConfig ?? api.config?.plugins?.entries?.masumi?.config ?? {}) as any;
 
       if (!isConfigured(cfg)) {
         return { content: [{ type: "text", text: SETUP_MESSAGE }] };
@@ -165,7 +165,7 @@ export default function (api: any) {
       properties: {}
     },
     async execute(_id: string, _params: any) {
-      const cfg = api.config as any;
+      const cfg = (api.pluginConfig ?? api.config?.plugins?.entries?.masumi?.config ?? {}) as any;
       if (isConfigured(cfg)) {
         return {
           content: [{
@@ -202,7 +202,7 @@ export default function (api: any) {
       }
     },
     async execute(_id: string, params: any) {
-      const cfg = api.config as any;
+      const cfg = (api.pluginConfig ?? api.config?.plugins?.entries?.masumi?.config ?? {}) as any;
 
       if (!isConfigured(cfg)) {
         return { content: [{ type: "text", text: SETUP_MESSAGE }] };
@@ -282,7 +282,7 @@ export default function (api: any) {
       required: ["agentIdentifier", "agentApiUrl", "inputData"]
     },
     async execute(_id: string, params: any) {
-      const cfg = api.config as any;
+      const cfg = (api.pluginConfig ?? api.config?.plugins?.entries?.masumi?.config ?? {}) as any;
 
       if (!isConfigured(cfg)) {
         return { content: [{ type: "text", text: SETUP_MESSAGE }] };
