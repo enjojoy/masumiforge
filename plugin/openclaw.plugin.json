@@ -21,7 +21,7 @@
         "description": "Cardano network (default: Preprod)"
       }
     },
-    "required": ["paymentServiceUrl", "apiKey"]
+    "required": []
   },
   "uiHints": {
     "apiKey": {
