@@ -91,17 +91,13 @@ export default function (api: PluginApi) {
           type: "object",
           description: "Input data as key-value pairs matching the agent's input schema"
         },
-        sellerVkey: {
-          type: "string",
-          description: "Seller wallet verification key (from registry listing)"
-        },
         network: {
           type: "string",
           enum: ["Preprod", "Mainnet"],
           description: "Network to use (default: Preprod)"
         }
       },
-      required: ["agentIdentifier", "agentApiUrl", "inputData", "sellerVkey"]
+      required: ["agentIdentifier", "agentApiUrl", "inputData"]
     },
     async execute(_id: string, params: any) {
       const cfg = api.config as any;
@@ -121,6 +117,23 @@ export default function (api: PluginApi) {
       const purchaserId = generateHexId(26);
 
       try {
+        // Auto-lookup sellerVkey from registry if not provided
+        let sellerVkey = params.sellerVkey;
+        if (!sellerVkey) {
+          const registryUrl = paymentServiceUrl.replace("/api/v1", "") + "/api/v1/registry/";
+          const regResp = await fetch(`${registryUrl}?network=${network}`, {
+            headers: { token: apiKey }
+          });
+          const regData = await regResp.json() as any;
+          const agent = (regData.data?.Assets || []).find((a: any) => a.agentIdentifier === params.agentIdentifier);
+          if (!agent) {
+            return { content: [{ type: "text", text: `❌ Agent ${params.agentIdentifier} not found in registry.` }] };
+          }
+          sellerVkey = agent.SmartContractWallet?.walletVkey;
+          if (!sellerVkey) {
+            return { content: [{ type: "text", text: `❌ Could not find seller vkey for agent in registry.` }] };
+          }
+        }
         // Step 1: Start job on the agent
         const inputDataArray = Object.entries(params.inputData).map(([key, value]) => ({
           id: key,
@@ -165,7 +178,7 @@ export default function (api: PluginApi) {
           body: JSON.stringify({
             network,
             blockchainIdentifier,
-            sellerVkey: params.sellerVkey,
+            sellerVkey,
             agentIdentifier: params.agentIdentifier,
             identifierFromPurchaser: purchaserId,
             payByTime,
