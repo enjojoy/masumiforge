@@ -119,14 +119,15 @@ async def process_job(identifier_from_purchaser: str, input_data: dict):
 
 ```python
 #!/usr/bin/env python3
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from masumi import run
+from masumi import create_masumi_app, Config
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 from agent import process_job
 
-# Input schema uses masumi's array format (not JSON Schema)
-# Mark optional fields with: "validations": [{"validation": "optional", "value": ""}]
 INPUT_SCHEMA = {
     "input_data": [
         {
@@ -147,26 +148,34 @@ INPUT_SCHEMA = {
     ]
 }
 
+config = Config(
+    payment_service_url=os.environ.get("PAYMENT_SERVICE_URL", ""),
+    payment_api_key=os.environ.get("PAYMENT_API_KEY", ""),
+)
+
+app = create_masumi_app(
+    config=config,
+    agent_identifier=os.environ.get("AGENT_IDENTIFIER"),
+    network=os.environ.get("NETWORK", "Preprod"),
+    seller_vkey=os.environ.get("SELLER_VKEY"),
+    start_job_handler=process_job,
+    input_schema_handler=INPUT_SCHEMA,
+)
+
+# Required: allows Sokosumi to fetch /input_schema from the browser
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 if __name__ == "__main__":
-    run(
-        start_job_handler=process_job,
-        input_schema_handler=INPUT_SCHEMA
-        # All env vars (PORT, PAYMENT_SERVICE_URL, PAYMENT_API_KEY,
-        # AGENT_IDENTIFIER, SELLER_VKEY, NETWORK) loaded automatically
-    )
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 ```
 
-Start with:
-```bash
-masumi run main.py
-```
-
-`masumi run` automatically:
-- Reads `PORT`, `PAYMENT_SERVICE_URL`, `PAYMENT_API_KEY`, `AGENT_IDENTIFIER`, `SELLER_VKEY`, `NETWORK` from env
-- Binds to `0.0.0.0` (required for Railway/Render/Docker)
-- Exposes all 5 MIP-003 endpoints
-- Handles payment verification and decision logging (MIP-004 hashing)
-- Manages job state (awaiting_payment → running → completed)
+⚠️ Always use `create_masumi_app()` + `CORSMiddleware` instead of `masumi.run()` — the `run()` helper doesn't support adding middleware, and without CORS Sokosumi cannot fetch the input schema from the browser.
 
 ---
 
