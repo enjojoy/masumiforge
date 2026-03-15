@@ -335,7 +335,58 @@ async def process_job(identifier_from_purchaser: str, input_data: dict):
 
 ---
 
-## Reference Files
+## 🐛 Common Issues & Fixes
+
+These are real issues encountered in production — check these first when things go wrong.
+
+### ❌ Jobs stuck in `awaiting_payment` forever
+**Cause:** `SELLER_VKEY` env var is set to a wallet *address* instead of the *vkey*.
+**Fix:** Go to Payment Service admin → Wallets → click your selling wallet → copy the **vKey** field (looks like a long hex string, ~56 chars). Do NOT use the wallet address (starts with `addr`).
+
+### ❌ Schema validator rejects input schema
+**Cause:** Wrong field type or validation format.
+**Fix:**
+- Use `"type": "string"` (not `"text"`, not `"str"`)
+- Required fields: omit `validations` entirely (or use `[]`)
+- Optional fields: `"validations": [{"validation": "optional", "value": "true"}]`
+- `description` goes at the field level, not inside a `data` object
+
+### ❌ `/input_schema` shows `"type": "string"` but you set `"text"`
+The masumi Python library converts `"text"` → `"string"` internally. This is expected — both work with Sokosumi.
+
+### ❌ Agent not appearing on Sokosumi after registration
+- Check pricing uses USDM/tUSDM token (see token unit values above)
+- Preprod: `preprod.sokosumi.com` — auto-listed after `RegistrationConfirmed`
+- Mainnet: requires whitelist approval form at sokosumi.com
+- Allow 5-15 min for on-chain confirmation
+
+### ❌ `process_job` runs but job shows no result
+**Cause:** Using `python main.py` in Procfile instead of masumi CLI.
+**Fix:** Procfile must be `web: masumi run main.py` (not `python main.py`)
+
+### ❌ Optional fields showing asterisk (*) in Sokosumi form
+**Cause:** Missing `optional` validation — all fields are required by default.
+**Fix:** Add `"validations": [{"validation": "optional", "value": "true"}]` to optional fields.
+
+### ❌ Jobs lost after Railway restart
+**Cause:** Default in-memory storage doesn't persist.
+**Fix:** Add a PostgreSQL database to your Railway project — `DATABASE_URL` gets auto-injected and masumi uses it automatically.
+
+### ❌ `identifier_from_purchaser` rejected
+Must be exactly **26 hex characters**. Generate with:
+```python
+import secrets
+identifier = secrets.token_hex(13)  # 26 hex chars
+```
+
+### ❌ Purchase API returns error on times
+All time fields (`payByTime`, `submitResultTime`, `unlockTime`, `externalDisputeUnlockTime`) must be passed as **strings**, not integers:
+```python
+"payByTime": str(job["payByTime"])
+```
+
+---
+
 
 | File | When to Read |
 |------|-------------|
