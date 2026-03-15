@@ -131,7 +131,7 @@ INPUT_SCHEMA = {
     "input_data": [
         {
             "id": "text",
-            "type": "string",
+            "type": "text",
             "name": "Text Input",
             "data": {
                 "description": "The text to process"
@@ -139,7 +139,7 @@ INPUT_SCHEMA = {
         },
         {
             "id": "optional_param",
-            "type": "string",
+            "type": "text",
             "name": "Optional Param",
             "data": {"description": "An optional field"},
             "validations": [{"validation": "optional", "value": ""}]
