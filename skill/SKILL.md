@@ -128,22 +128,31 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from agent import process_job
 
+# INPUT_SCHEMA follows MIP-003 Attachment 01
+# - type: use HTML input types — "text", "textarea", "number", "boolean", "option", "email", "url", "file", "date", etc.
+# - validations: [] for required fields with no constraints
+# - optional fields: {"validation": "optional", "value": "true"}
 INPUT_SCHEMA = {
     "input_data": [
         {
-            "id": "text",
-            "type": "string",
-            "name": "Text Input",
+            "id": "query",
+            "type": "text",
+            "name": "Query",
+            "validations": [],
             "data": {
-                "description": "The text to process"
+                "placeholder": "e.g. Describe what you want...",
+                "description": "Your request"
             }
         },
         {
             "id": "optional_param",
-            "type": "string",
+            "type": "text",
             "name": "Optional Param",
-            "data": {"description": "An optional field"},
-            "validations": []
+            "validations": [{"validation": "optional", "value": "true"}],
+            "data": {
+                "placeholder": "Optional",
+                "description": "An optional parameter"
+            }
         }
     ]
 }
