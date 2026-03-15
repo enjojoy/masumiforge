@@ -373,10 +373,11 @@ function default_1(api) {
                 const jobId = startData.job_id || startData.data?.job_id || startData.id;
                 const blockchainIdentifier = startData.blockchainIdentifier || startData.data?.blockchainIdentifier;
                 const amounts = startData.amounts || startData.data?.amounts || [];
-                const submitResultTime = startData.submitResultTime || startData.data?.submitResultTime;
-                const unlockTime = startData.unlockTime || startData.data?.unlockTime;
-                const externalDisputeUnlockTime = startData.externalDisputeUnlockTime || startData.data?.externalDisputeUnlockTime;
-                const payByTime = startData.payByTime || startData.data?.payByTime || Math.floor(Date.now() / 1000) + 600;
+                const inputHash = startData.input_hash || startData.data?.input_hash;
+                const submitResultTime = String(startData.submitResultTime || startData.data?.submitResultTime || "");
+                const unlockTime = String(startData.unlockTime || startData.data?.unlockTime || "");
+                const externalDisputeUnlockTime = String(startData.externalDisputeUnlockTime || startData.data?.externalDisputeUnlockTime || "");
+                const payByTime = String(startData.payByTime || startData.data?.payByTime || (Date.now() + 600000));
                 // Step 2: Create purchase via Masumi Payment Service
                 const purchaseResp = await fetch(`${paymentServiceUrl}/purchase/`, {
                     method: "POST",
@@ -395,6 +396,7 @@ function default_1(api) {
                         unlockTime,
                         externalDisputeUnlockTime,
                         amounts,
+                        inputHash,
                         inputData: inputDataDict
                     })
                 });
