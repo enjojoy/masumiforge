@@ -143,7 +143,7 @@ INPUT_SCHEMA = {
             "type": "string",
             "name": "Optional Param",
             "data": {"description": "An optional field"},
-            "validations": [{"validation": "optional", "value": ""}]
+            "validations": []
         }
     ]
 }
