@@ -141,7 +141,8 @@ INPUT_SCHEMA = {
             "id": "optional_param",
             "type": "string",
             "name": "Optional Param (optional)",
-            "description": "An optional parameter — leave blank if not needed"
+            "description": "An optional parameter — leave blank if not needed",
+            "validations": [{"validation": "optional", "value": "true"}]
         }
     ]
 }
