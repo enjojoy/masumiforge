@@ -362,7 +362,7 @@ function default_1(api) {
                     })
                 });
                 const startData = await startResp.json();
-                if (!startData.job_id && !startData.data?.job_id) {
+                if (!startData.job_id && !startData.data?.job_id && !startData.id) {
                     return {
                         content: [{
                                 type: "text",
@@ -370,7 +370,7 @@ function default_1(api) {
                             }]
                     };
                 }
-                const jobId = startData.job_id || startData.data?.job_id;
+                const jobId = startData.job_id || startData.data?.job_id || startData.id;
                 const blockchainIdentifier = startData.blockchainIdentifier || startData.data?.blockchainIdentifier;
                 const amounts = startData.amounts || startData.data?.amounts || [];
                 const submitResultTime = startData.submitResultTime || startData.data?.submitResultTime;

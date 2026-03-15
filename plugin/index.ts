@@ -391,7 +391,7 @@ export default function (api: any) {
 
         const startData = await startResp.json() as any;
 
-        if (!startData.job_id && !startData.data?.job_id) {
+        if (!startData.job_id && !startData.data?.job_id && !startData.id) {
           return {
             content: [{
               type: "text",
@@ -400,7 +400,7 @@ export default function (api: any) {
           };
         }
 
-        const jobId = startData.job_id || startData.data?.job_id;
+        const jobId = startData.job_id || startData.data?.job_id || startData.id;
         const blockchainIdentifier = startData.blockchainIdentifier || startData.data?.blockchainIdentifier;
         const amounts = startData.amounts || startData.data?.amounts || [];
         const submitResultTime = startData.submitResultTime || startData.data?.submitResultTime;
