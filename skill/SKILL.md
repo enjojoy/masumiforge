@@ -365,11 +365,15 @@ The masumi Python library converts `"text"` → `"string"` internally. This is e
 **Fix:** Procfile must be `web: masumi run main.py` (not `python main.py`)
 
 ### ❌ `option` field returns a list, not a string
-`"type": "option"` always delivers the selected value(s) as a Python list, even for single-select. Always unpack:
+`"type": "option"` always delivers the selected value(s) as a Python list, and the element may be an **int index** (not the string value). Always handle both:
 ```python
+OPTIONS = ["choice A", "choice B", "choice C"]
 value = input_data.get("my_field", "")
 if isinstance(value, list):
-    value = value[0] if value else ""
+    raw = value[0] if value else ""
+    value = OPTIONS[raw] if isinstance(raw, int) else str(raw)
+elif isinstance(value, int):
+    value = OPTIONS[value]
 ```
 
 ### ❌ Optional fields showing asterisk (*) in Sokosumi form
