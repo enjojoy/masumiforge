@@ -504,6 +504,132 @@ export default function (api: any) {
     }
   });
 
+
+  // ── Validate Input Schema ──────────────────────────────────────────────────
+  api.registerTool({
+    name: "masumi_validate_schema",
+    description: "Validate a Masumi agent's input_schema against the MIP-003 specification. Use when an agent's input schema is failing on Sokosumi or returning validation errors. Can validate a schema object directly or fetch it from a live agent URL.",
+    parameters: {
+      type: "object",
+      properties: {
+        agent_url: {
+          type: "string",
+          description: "Public URL of the agent to fetch and validate its /input_schema endpoint (e.g. https://my-agent.up.railway.app)"
+        },
+        schema: {
+          type: "object",
+          description: "Raw input schema object to validate directly (alternative to agent_url)"
+        }
+      }
+    },
+    async execute(_id: string, params: any) {
+      let schemaObj: any = null;
+      let source = "";
+
+      // Fetch from live agent if URL provided
+      if (params.agent_url) {
+        try {
+          const resp = await fetch(`${params.agent_url.replace(/\/$/, "")}/input_schema`);
+          if (!resp.ok) {
+            return { content: [{ type: "text", text: `❌ Could not fetch /input_schema from ${params.agent_url} (HTTP ${resp.status})` }] };
+          }
+          schemaObj = await resp.json();
+          source = params.agent_url;
+        } catch (err: any) {
+          return { content: [{ type: "text", text: `❌ Failed to fetch schema: ${err.message}` }] };
+        }
+      } else if (params.schema) {
+        schemaObj = params.schema;
+        source = "provided schema";
+      } else {
+        return { content: [{ type: "text", text: "❌ Provide either agent_url or schema parameter." }] };
+      }
+
+      const errors: string[] = [];
+      const warnings: string[] = [];
+
+      // Normalize — support wrapped {input_data: [...]} or bare array
+      const fields: any[] = Array.isArray(schemaObj)
+        ? schemaObj
+        : Array.isArray(schemaObj?.input_data)
+          ? schemaObj.input_data
+          : null;
+
+      if (!fields) {
+        return { content: [{ type: "text", text: `❌ Schema must be an array or \`{input_data: [...]}\` object.\n\nGot: \`${JSON.stringify(schemaObj).slice(0, 200)}\`` }] };
+      }
+
+      const validTypes = ["text", "textarea", "number", "email", "password", "tel", "url",
+        "date", "datetime-local", "time", "month", "week", "color", "range",
+        "file", "option", "checkbox", "radio", "boolean", "hidden", "search", "none", "string"];
+
+      const validValidations = ["min", "max", "format", "optional", "accept"];
+      const seenIds = new Set<string>();
+
+      fields.forEach((field: any, i: number) => {
+        const prefix = `Field[${i}] (id: "${field?.id ?? "?"}"):`;
+
+        if (!field.id) errors.push(`${prefix} missing required "id"`);
+        if (!field.type) errors.push(`${prefix} missing required "type"`);
+        if (!field.name) errors.push(`${prefix} missing required "name"`);
+
+        if (field.id && seenIds.has(field.id)) {
+          errors.push(`${prefix} duplicate id "${field.id}"`);
+        }
+        if (field.id) seenIds.add(field.id);
+
+        if (field.type && !validTypes.includes(field.type)) {
+          warnings.push(`${prefix} unknown type "${field.type}" — valid types: ${validTypes.join(", ")}`);
+        }
+
+        if (field.validations) {
+          if (!Array.isArray(field.validations)) {
+            errors.push(`${prefix} "validations" must be an array`);
+          } else {
+            field.validations.forEach((v: any, vi: number) => {
+              if (!v.validation) {
+                errors.push(`${prefix} validations[${vi}] missing "validation" key`);
+              } else if (!validValidations.includes(v.validation)) {
+                warnings.push(`${prefix} validations[${vi}] unknown validation "${v.validation}"`);
+              }
+              // Check for missing value field (common Sokosumi bug)
+              if (v.validation && v.validation !== "optional" && v.value === undefined) {
+                errors.push(`${prefix} validations[${vi}] ("${v.validation}") missing required "value" field`);
+              }
+              if (v.validation === "optional" && v.value === undefined) {
+                warnings.push(`${prefix} validations[${vi}] optional validation missing "value" field — add \`"value": ""\` for Sokosumi compatibility`);
+              }
+            });
+          }
+        }
+      });
+
+      if (errors.length === 0 && warnings.length === 0) {
+        return {
+          content: [{
+            type: "text",
+            text: `✅ Schema is valid! (${fields.length} field${fields.length !== 1 ? "s" : ""})\n\nSource: ${source}`
+          }]
+        };
+      }
+
+      let report = `Schema validation report for: ${source}\n`;
+      report += `Fields: ${fields.length}\n\n`;
+
+      if (errors.length > 0) {
+        report += `❌ ${errors.length} error${errors.length !== 1 ? "s" : ""}:\n`;
+        errors.forEach(e => report += `  • ${e}\n`);
+        report += "\n";
+      }
+      if (warnings.length > 0) {
+        report += `⚠️ ${warnings.length} warning${warnings.length !== 1 ? "s" : ""}:\n`;
+        warnings.forEach(w => report += `  • ${w}\n`);
+      }
+
+      return { content: [{ type: "text", text: report }] };
+    }
+  });
+
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
